@@ -398,3 +398,19 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+
+
+#virtual environments
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+ldfg_venv/
+
+#data files 
+*.csv
