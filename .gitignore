@@ -410,7 +410,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
-ldfg_venv/
+dfg_venv/
 
 #data files 
 *.csv
