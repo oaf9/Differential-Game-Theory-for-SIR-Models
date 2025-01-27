@@ -414,3 +414,4 @@ dfg_venv/
 
 #data files 
 *.csv
+.Rproj.user
