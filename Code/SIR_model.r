@@ -36,9 +36,7 @@ sir_data_plot <- ggplot(data = michigan_data, aes(x = date))+
        x = "Date",
        y = "Number of People")
 
-
-
-
+sir_data_plot
 
 
 
