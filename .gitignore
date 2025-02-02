@@ -425,4 +425,10 @@ dfg_venv/
 .png
 .jpeg
 
+# local folders
+Data/
+Images/
+
+
+
 
