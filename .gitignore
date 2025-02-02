@@ -414,16 +414,17 @@ dfg_venv/
 
 #data files 
 *.csv
-.Rproj.user
-.Rproj
-.Rhistory
-.RData
-.DS_Store
+*.Rproj.user
+*.Rproj
+*.Rhistory
+*.RData
+*.DS_Store
+
 
 #images 
-.csv
-.png
-.jpeg
+*.png
+*.jpeg
+
 
 # local folders
 Data/
