@@ -25,7 +25,6 @@ michigan_data["log_infected"] <- log(I)
 
 
 
-
 sir_data_plot <- ggplot(data = michigan_data, aes(x = date))+
   geom_line(aes(y = Recovered), 
             size = 1,
