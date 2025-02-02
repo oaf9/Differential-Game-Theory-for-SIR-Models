@@ -85,7 +85,7 @@ ggplot(data = output, aes(x = date_times))+
                                 "Actual Infection Counts" = "black"))+ 
   labs(title = "Predicted vs. Actual Infections", 
        subtitle = TeX("Paramaters: $ \\beta = .784, \\gamma = .107, N = 10.2M, 
-                      I_0 = 44,357, S_0 = 8,761,220, R_0 = 995$"),
+                      I_0 = 44,357, S_0 = 8,761,220, R_0 = 995,210$"),
        x = "Month",
        y = "Number of Infections")
 
