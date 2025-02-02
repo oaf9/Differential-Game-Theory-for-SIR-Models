@@ -416,3 +416,13 @@ dfg_venv/
 *.csv
 .Rproj.user
 .Rproj
+.Rhistory
+.RData
+.DS_Store
+
+#images 
+.csv
+.png
+.jpeg
+
+
