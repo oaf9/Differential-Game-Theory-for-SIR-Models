@@ -19,7 +19,6 @@ class solveSIR:
         self.N = N
         self.p = p_0
         self.time_steps = np.arange(0, len(S_true), 1)
-        self.times = np.arange(0, 173, .1)
 
         self.I = I_true
         self.S = S_true
@@ -68,7 +67,6 @@ class solveSIR:
                           [0          ,             -γ, 0]])
 
         #return the negative since we are integrating backwards
-
         return  -(df_dx + np.array(λ).T@dh_dx)
     
     
@@ -129,17 +127,12 @@ class solveSIR:
             self.I_hat = V[:, 1]
             self.R_hat = V[:, 2]
 
-
             #step 2 is to solve the backwards problems 
             self.λ = self.backwardsSolve()
-
-            print(np.max(self.λ))
 
 
             #compute the gradient
             dL_dp = np.clip(self.dF_dp(),-2, 2)
-            #dL_dp = self.dF_dp()
-
             
             #perform the gradient update
             self.p = self.p - η*dL_dp
@@ -174,45 +167,59 @@ class solveSIR:
 
         dF = (X[1:,] - X[0:-1,])/dt
 
-        #print(dX[0])
-
-        S_0, I_0, R_0 = S[0], I[0], R[0]
-        #sanity check to make sure that the broadcasting is working
-        #print(np.sum( dX[0] - [-B*I_0*S_0/N, B*I_0*S_0/N - g*I_0, g*I_0]))
-                     
+        #print(dX[0]) 
         diffs = np.abs((dX[1:,] - dF)/dF)
 
         return np.mean(diffs)
     
     def checkBackwardEquations(self):
+        #we do not update any class variables for the check function.
 
-        #It should be the case that 
-        #x[i+1] - x[i] = dx
+        #solve the forward problem
         X = self.forwardSolve()
-        
+
+        self.S_hat, self.I_hat, self.R_hat =  X[:, 0], X[:, 1], X[:, 2]
+        print(np.array([ self.S_hat, self.I_hat, self.R_hat]).T)
+
+
         λ = self.backwardsSolve()
-        
 
-
-        S, I, R =  X[:, 0], X[:, 1], X[:, 2]
-
-        B, g  = self.p[0:2]
+        β, γ  = self.p[0:2]
         N = self.N
+
+        dλ = []
+
+        for t in self.time_steps:
+
+            I  = self.I[t]
+            I_hat = self.I_hat[t]
+            S_hat = self.S_hat[t]
+            N = self.N
+
+            λ_t = np.array(λ[t])
+    
+            df_dx = -2*np.array([0, I - I_hat, 0])
+            dh_dx = np.array([[β*I_hat/N  ,      β*S_hat/N, 0],
+                            [-β*I_hat/N  , -β*S_hat/N + γ, 0],
+                            [0          ,             -γ, 0]])
+            
+            dλ.append(df_dx + λ_t.T@dh_dx) 
+
+        dλ = np.array(dλ)
         dt = self.time_steps[1]-self.time_steps[0]
 
-        dX = np.array([-B*I*S/N, B*I*S/N - g*I, g*I]).T
-
-        dF = (X[1:,] - X[0:-1,])/dt
-
+   
+        #the solution to the last coordinate is 0, so we add some noise to avoid
+        #division errors. 
+        df = (λ[1:,] - λ[0:-1,])/dt + .0001
+        print(λ)
+        print(df)
+        print(dλ)
         #print(dX[0])
 
-        S_0, I_0, R_0 = S[0], I[0], R[0]
-        #sanity check to make sure that the broadcasting is working
-        #print(np.sum( dX[0] - [-B*I_0*S_0/N, B*I_0*S_0/N - g*I_0, g*I_0]))
-                     
-        diffs = np.abs((dX[1:,] - dF)/dF)
+        diffs = np.abs((dλ[1:,] - df)/df)
 
-        return np.mean(diffs)
+        return np.mean(diffs), λ, dλ
 
             
 
