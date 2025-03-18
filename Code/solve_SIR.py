@@ -19,6 +19,7 @@ class solveSIR:
         self.N = N
         self.p = p_0
         self.time_steps = np.arange(0, len(S_true), 1)
+        self.times = np.arange(0, 173, .1)
 
         self.I = I_true
         self.S = S_true
@@ -75,7 +76,7 @@ class solveSIR:
         """Backwards solve for λ(t). 
         """
 
-        #output must be flipped since the solver will only solve a forward problem.
+        #output must be flipped ...the solver will only solve a forward problem.
         return solve_ivp(fun = self.lamdaDE, 
                         y0 = [0,0,0], 
                         t_span = [0, self.time_steps[-1]],
@@ -136,8 +137,8 @@ class solveSIR:
 
 
             #compute the gradient
-            dL_dp = np.clip(self.dF_dp(),-1, 1)
-            dL_dp = self.dF_dp()
+            dL_dp = np.clip(self.dF_dp(),-2, 2)
+            #dL_dp = self.dF_dp()
 
             
             #perform the gradient update
@@ -152,3 +153,66 @@ class solveSIR:
 
     
         return self.p, self.forwardSolve()
+    
+
+    #some functions that are usefull for debugging: 
+    # this checks that the forward solvers are actually solving the equations 
+    # correctly by checking the finite
+    def checkForwardEquations(self):
+
+        #It should be the case that 
+        #x[i+1] - x[i] = dx
+        X = self.forwardSolve()
+
+        S, I, R =  X[:, 0], X[:, 1], X[:, 2]
+
+        B, g  = self.p[0:2]
+        N = self.N
+        dt = self.time_steps[1]-self.time_steps[0]
+
+        dX = np.array([-B*I*S/N, B*I*S/N - g*I, g*I]).T
+
+        dF = (X[1:,] - X[0:-1,])/dt
+
+        #print(dX[0])
+
+        S_0, I_0, R_0 = S[0], I[0], R[0]
+        #sanity check to make sure that the broadcasting is working
+        #print(np.sum( dX[0] - [-B*I_0*S_0/N, B*I_0*S_0/N - g*I_0, g*I_0]))
+                     
+        diffs = np.abs((dX[1:,] - dF)/dF)
+
+        return np.mean(diffs)
+    
+    def checkBackwardEquations(self):
+
+        #It should be the case that 
+        #x[i+1] - x[i] = dx
+        X = self.forwardSolve()
+        
+        λ = self.backwardsSolve()
+        
+
+
+        S, I, R =  X[:, 0], X[:, 1], X[:, 2]
+
+        B, g  = self.p[0:2]
+        N = self.N
+        dt = self.time_steps[1]-self.time_steps[0]
+
+        dX = np.array([-B*I*S/N, B*I*S/N - g*I, g*I]).T
+
+        dF = (X[1:,] - X[0:-1,])/dt
+
+        #print(dX[0])
+
+        S_0, I_0, R_0 = S[0], I[0], R[0]
+        #sanity check to make sure that the broadcasting is working
+        #print(np.sum( dX[0] - [-B*I_0*S_0/N, B*I_0*S_0/N - g*I_0, g*I_0]))
+                     
+        diffs = np.abs((dX[1:,] - dF)/dF)
+
+        return np.mean(diffs)
+
+            
+
