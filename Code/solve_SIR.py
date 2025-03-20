@@ -67,7 +67,7 @@ class solveSIR:
                       t = self.time_steps[::-1])[::-1]
 
     #the backwards eqautions
-    def lamdaDE(self, λ, t):
+    def lamdaDE(self, t, λ):
         """
         solve the backwards problem for λ(t)
         """
@@ -93,39 +93,16 @@ class solveSIR:
         return solve_ivp(self.lamdaDE, 
                          y0 =  [0,0,0],
                          t_span = [self.time_steps[-1], self.time_steps[0]],
-                         t_eval = self.time_steps[::-1],
-                         method='RK45')
+                         t_eval = self.time_steps[::-1]).y.T[::-1]
     
-    def backwardsSolve2(self):
-        """Backwards solve for λ(t) using solve_ivp."""
-        def lambdaDE_wrapper(t, λ):
-            return self.lamdaDE(λ, t)
-
-        # Use solve_ivp for backward integration
-        sol = solve_ivp(
-            fun=lambdaDE_wrapper,
-            t_span=[self.time_steps[-1], self.time_steps[0]],  # Backward in time
-            y0=[0, 0, 0],
-            t_eval=self.time_steps[::-1],  # Ensure time points match
-            method='RK45',  # Adaptive step-size method
-        )
-
-        return sol.y.T[::-1]
-    
-    def forwardLambdaSolve(self, y0):
-        """Solve the adjoint λ(t) forward in time using solve_ivp."""
-        def lambdaDE_wrapper(t, λ):
-            return self.lamdaDE(λ, t)
-
-        sol = solve_ivp(
-            fun=lambdaDE_wrapper,
+    #to check the stability of the backwards solver
+    def fbSolve(self, y0):
+        return solve_ivp(
+            fun=self.lamdaDE,
             t_span=[self.time_steps[0], self.time_steps[-1]],
             y0=y0,
-            t_eval=self.time_steps,
-            method='RK45',
-        )
+            t_eval=self.time_steps).y.T
 
-        return sol.y.T
 
 
 
