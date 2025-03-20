@@ -49,22 +49,11 @@ class solveSIR:
         return dS, dI, dR
     
     def forwardSolve(self):
-
         """solves the forward problem
         """
         return odeint(self.SIR, 
                       y0 = self.p[2:],
                       t = self.time_steps)
-    
-    def bSIR(self, V, t):
-        return - self.SIR(V,t)
-
-    def bSIRSolve(self, y0):
-        """solves the forward problem
-        """
-        return odeint(self.SIR, 
-                      y0 = y0,
-                      t = self.time_steps[::-1])[::-1]
 
     #the backwards eqautions
     def lamdaDE(self, t, λ):
@@ -83,7 +72,7 @@ class solveSIR:
                           [0          ,             -γ, 0]])
 
         #return the negative since we are integrating backwards
-        return  -(df_dx + np.array(λ).T@dh_dx)
+        return -(df_dx + np.array(λ).T@dh_dx)
 
 
     def backwardsSolve(self):
@@ -109,7 +98,7 @@ class solveSIR:
     #the integral for dF_dp
     def dh_dp(self,t):
 
-        I, I_hat, S_hat, N = self.I[t], self.I_hat[t], self.S_hat[t], self.N
+        I, I_hat, S_hat, N = self.I(t), self.I_hat(t), self.S_hat(t), self.N
 
         return np.array([[ I_hat*S_hat/N,      0,0,0,0],
                          [-I_hat*S_hat/N,  I_hat,0,0,0],
@@ -137,7 +126,7 @@ class solveSIR:
                 self.λ[0].T@dh_dx_dt@ np.linalg.inv(dg_dx0)@dg_dp)
     
 
-    def fit(self, max_iter = 200, η = .0001, ε = .01):
+    def fit(self, max_iter = 400, η = .00001, ε = .01):
         """A gradient descent implementation to find p*
         """
         i = 1
@@ -159,10 +148,16 @@ class solveSIR:
             self.λ = self.backwardsSolve()
 
             #compute the gradient
-            dL_dp = np.clip(self.dF_dp(),-100, 100)
+            dL_dp = np.clip(self.dF_dp(),-10, 10)
             #dL_dp = self.dF_dp()
             #perform the gradient update
-            self.p = self.p - (η/(np.sqrt(i)))*dL_dp
+            self.p = self.p - (η/i)*dL_dp
+
+            if self.p[0] < 0:
+                self.p[0] = .1
+            
+            if self.p[1] < 0:
+                self.p[1] = .1
 
 
             #check for convergence: 
@@ -203,13 +198,24 @@ class solveSIR:
         #we do not update any class variables for the check function.
 
         #solve the forward problem
-        X = self.forwardSolve()
+        V = self.forwardSolve()
 
-        self.S_hat, self.I_hat, self.R_hat =  X[:, 0], X[:, 1], X[:, 2]
+        self.S_hat =  interp1d(np.arange(len(V)), V[:, 0], 
+                        kind = 'quadratic', fill_value="extrapolate", axis=-1)
+        self.I_hat =  interp1d(np.arange(len(V)), V[:, 1], 
+                kind = 'quadratic', fill_value="extrapolate", axis=-1)
+        self.R_hat =  interp1d(np.arange(len(V)), V[:, 2], 
+                kind = 'quadratic', fill_value="extrapolate", axis=-1)
         print(np.array([ self.S_hat, self.I_hat, self.R_hat]).T)
 
 
         λ = self.backwardsSolve()
+        print(λ.shape)
+        λ = interp1d(np.arange(len(λ)), λ, 
+                           kind = 'quadratic', 
+                           fill_value = "extrapolate", axis=0)
+        
+        print(λ(0))
 
         β, γ  = self.p[0:2]
         N = self.N
@@ -218,12 +224,9 @@ class solveSIR:
 
         for t in self.time_steps:
 
-            I  = self.I[t]
-            I_hat = self.I_hat[t]
-            S_hat = self.S_hat[t]
-            N = self.N
+            I, I_hat, S_hat, N = self.I(t), self.I_hat(t), self.S_hat(t), self.N
 
-            λ_t = np.array(λ[t])
+            λ_t = np.array(λ(t))
     
             df_dx = -2*np.array([0, I - I_hat, 0])
             dh_dx = np.array([[β*I_hat/N  ,      β*S_hat/N, 0],
@@ -238,7 +241,11 @@ class solveSIR:
    
         #the solution to the last coordinate is 0, so we add some noise to avoid
         #division errors. 
-        df = (λ[1:,] - λ[0:-1,])/dt + .0001
+        l1 = np.array([λ(t) for t in self.time_steps[1:,]])
+        l2 = np.array([λ(t) for t in self.time_steps[0:-1,]])
+
+
+        df = (l1 - l2)/dt + .0001
         print(λ)
         print(df)
         print(dλ)
