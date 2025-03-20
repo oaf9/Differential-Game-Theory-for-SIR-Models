@@ -27,7 +27,7 @@ class solveSIR:
                            kind = 'quadratic', 
                            fill_value = "extrapolate", axis=-1)
 
-        self.R =  interp1d(np.arange(len(R_true)), S_true, 
+        self.R =  interp1d(np.arange(len(R_true)), R_true, 
                            kind = 'quadratic', 
                            fill_value="extrapolate", axis=-1)
 
@@ -55,7 +55,16 @@ class solveSIR:
         return odeint(self.SIR, 
                       y0 = self.p[2:],
                       t = self.time_steps)
+    
+    def bSIR(self, V, t):
+        return - self.SIR(V,t)
 
+    def bSIRSolve(self, y0):
+        """solves the forward problem
+        """
+        return odeint(self.SIR, 
+                      y0 = y0,
+                      t = self.time_steps[::-1])[::-1]
 
     #the backwards eqautions
     def lamdaDE(self, λ, t):
@@ -75,44 +84,51 @@ class solveSIR:
 
         #return the negative since we are integrating backwards
         return  -(df_dx + np.array(λ).T@dh_dx)
-    
-    def flamdaDE(self, λ, t):
-        """
-        solve the forward problem for λ(t)
-        """
-        β, γ  = self.p[0:2]
-
-        # simpler names for readability
-        I, I_hat, S_hat, N = self.I(t), self.I_hat(t), self.S_hat(t), self.N
-
-        df_dx = -2*np.array([0, I - I_hat, 0])
-        dh_dx = np.array([[β*I_hat/N  ,      β*S_hat/N, 0],
-                            [-β*I_hat/N , -β*S_hat/N + γ, 0],
-                            [0          ,             -γ, 0]])
-
-        return  (df_dx + np.array(λ).T@dh_dx)
 
 
     def backwardsSolve(self):
         """Backwards solve for λ(t). 
         """
-
         #output must be flipped ...the solver will only solve a forward problem.
-        return odeint(self.lamdaDE, 
-                    y0 =  [0,0,0],
-                    t = self.time_steps, 
-                    atol=1e-10, rtol=1e-10)[::-1]
-
-    def FSolve(self, y0):
-        """Forward solve for λ(t). 
-        """
-
-        #output must be flipped ...the solver will only solve a forward problem.
-        return odeint(self.flamdaDE, 
-                    y0 =  y0,
-                    t = self.time_steps,
-                    atol=1e-10, rtol=1e-10)
+        return solve_ivp(self.lamdaDE, 
+                         y0 =  [0,0,0],
+                         t_span = [self.time_steps[-1], self.time_steps[0]],
+                         t_eval = self.time_steps[::-1],
+                         method='RK45')
     
+    def backwardsSolve2(self):
+        """Backwards solve for λ(t) using solve_ivp."""
+        def lambdaDE_wrapper(t, λ):
+            return self.lamdaDE(λ, t)
+
+        # Use solve_ivp for backward integration
+        sol = solve_ivp(
+            fun=lambdaDE_wrapper,
+            t_span=[self.time_steps[-1], self.time_steps[0]],  # Backward in time
+            y0=[0, 0, 0],
+            t_eval=self.time_steps[::-1],  # Ensure time points match
+            method='RK45',  # Adaptive step-size method
+        )
+
+        return sol.y.T[::-1]
+    
+    def forwardLambdaSolve(self, y0):
+        """Solve the adjoint λ(t) forward in time using solve_ivp."""
+        def lambdaDE_wrapper(t, λ):
+            return self.lamdaDE(λ, t)
+
+        sol = solve_ivp(
+            fun=lambdaDE_wrapper,
+            t_span=[self.time_steps[0], self.time_steps[-1]],
+            y0=y0,
+            t_eval=self.time_steps,
+            method='RK45',
+        )
+
+        return sol.y.T
+
+
+
     #the integral for dF_dp
     def dh_dp(self,t):
 
