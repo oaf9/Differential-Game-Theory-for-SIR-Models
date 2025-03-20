@@ -11,7 +11,6 @@ class solveSIR:
     R_hat = None
     λ = None
 
-
     #constructor
     def __init__(self, S_true, I_true, R_true, N, p_0):
     
@@ -20,9 +19,17 @@ class solveSIR:
         self.p = p_0
         self.time_steps = np.arange(0, len(S_true), 1)
 
-        self.I = I_true
-        self.S = S_true
-        self.R = R_true
+        self.S =  interp1d(np.arange(len(S_true)), S_true, 
+                           kind = 'quadratic', 
+                           fill_value = "extrapolate", axis=-1)
+        
+        self.I =  interp1d(np.arange(len(I_true)), I_true, 
+                           kind = 'quadratic', 
+                           fill_value = "extrapolate", axis=-1)
+
+        self.R =  interp1d(np.arange(len(R_true)), S_true, 
+                           kind = 'quadratic', 
+                           fill_value="extrapolate", axis=-1)
 
     #the forwards equations
     def SIR(self, V, t):
@@ -51,15 +58,15 @@ class solveSIR:
 
 
     #the backwards eqautions
-    def lamdaDE(self, t, λ):
+    def lamdaDE(self, λ, t):
         """
         solve the backwards problem for λ(t)
         """
         β, γ  = self.p[0:2]
 
         # simpler names for readability
-        t = int(t)
-        I, I_hat, S_hat, N = self.I[t], self.I_hat[t], self.S_hat[t], self.N
+
+        I, I_hat, S_hat, N = self.I(t), self.I_hat(t), self.S_hat(t), self.N
  
         df_dx = -2*np.array([0, I - I_hat, 0])
         dh_dx = np.array([[β*I_hat/N  ,      β*S_hat/N, 0],
@@ -69,18 +76,43 @@ class solveSIR:
         #return the negative since we are integrating backwards
         return  -(df_dx + np.array(λ).T@dh_dx)
     
-    
+    def flamdaDE(self, λ, t):
+        """
+        solve the forward problem for λ(t)
+        """
+        β, γ  = self.p[0:2]
+
+        # simpler names for readability
+        I, I_hat, S_hat, N = self.I(t), self.I_hat(t), self.S_hat(t), self.N
+
+        df_dx = -2*np.array([0, I - I_hat, 0])
+        dh_dx = np.array([[β*I_hat/N  ,      β*S_hat/N, 0],
+                            [-β*I_hat/N , -β*S_hat/N + γ, 0],
+                            [0          ,             -γ, 0]])
+
+        return  (df_dx + np.array(λ).T@dh_dx)
+
+
     def backwardsSolve(self):
         """Backwards solve for λ(t). 
         """
 
         #output must be flipped ...the solver will only solve a forward problem.
-        return solve_ivp(fun = self.lamdaDE, 
-                        y0 = [0,0,0], 
-                        t_span = [0, self.time_steps[-1]],
-                        t_eval = self.time_steps).y.T[::-1]
+        return odeint(self.lamdaDE, 
+                    y0 =  [0,0,0],
+                    t = self.time_steps, 
+                    atol=1e-10, rtol=1e-10)[::-1]
 
+    def FSolve(self, y0):
+        """Forward solve for λ(t). 
+        """
 
+        #output must be flipped ...the solver will only solve a forward problem.
+        return odeint(self.flamdaDE, 
+                    y0 =  y0,
+                    t = self.time_steps,
+                    atol=1e-10, rtol=1e-10)
+    
     #the integral for dF_dp
     def dh_dp(self,t):
 
@@ -112,10 +144,10 @@ class solveSIR:
                 self.λ[0].T@dh_dx_dt@ np.linalg.inv(dg_dx0)@dg_dp)
     
 
-    def fit(self, max_iter = 100, η = .001, ε = .01):
+    def fit(self, max_iter = 200, η = .0001, ε = .01):
         """A gradient descent implementation to find p*
         """
-        i = 0
+        i = 1
         while(True):
 
             print(f"round: {i}")
@@ -123,19 +155,21 @@ class solveSIR:
             #step 1 is to integrate for (S,I,R) and update the SIR values
             V = self.forwardSolve()
 
-            self.S_hat = V[:, 0]
-            self.I_hat = V[:, 1]
-            self.R_hat = V[:, 2]
-
+            self.S_hat =  interp1d(np.arange(len(V)), V[:, 0], 
+                    kind = 'quadratic', fill_value="extrapolate", axis=-1)
+            self.I_hat =  interp1d(np.arange(len(V)), V[:, 1], 
+                    kind = 'quadratic', fill_value="extrapolate", axis=-1)
+            self.R_hat =  interp1d(np.arange(len(V)), V[:, 2], 
+                    kind = 'quadratic', fill_value="extrapolate", axis=-1)
+        
             #step 2 is to solve the backwards problems 
             self.λ = self.backwardsSolve()
 
-
             #compute the gradient
-            dL_dp = np.clip(self.dF_dp(),-2, 2)
-            
+            dL_dp = np.clip(self.dF_dp(),-100, 100)
+            #dL_dp = self.dF_dp()
             #perform the gradient update
-            self.p = self.p - η*dL_dp
+            self.p = self.p - (η/(np.sqrt(i)))*dL_dp
 
 
             #check for convergence: 
@@ -203,7 +237,7 @@ class solveSIR:
                             [-β*I_hat/N  , -β*S_hat/N + γ, 0],
                             [0          ,             -γ, 0]])
             
-            dλ.append(df_dx + λ_t.T@dh_dx) 
+            dλ.append((df_dx + λ_t.T@dh_dx)) 
 
         dλ = np.array(dλ)
         dt = self.time_steps[1]-self.time_steps[0]
@@ -219,7 +253,5 @@ class solveSIR:
 
         diffs = np.abs((dλ[1:,] - df)/df)
 
-        return np.mean(diffs), λ, dλ
-
-            
+        return np.mean(diffs), df,  λ, dλ
 
