@@ -126,13 +126,14 @@ class solveSIR:
                 self.λ[0].T@dh_dx_dt@ np.linalg.inv(dg_dx0)@dg_dp)
     
 
-    def fit(self, max_iter = 400, η = .00001, ε = .01):
+    def fit(self, max_iter = 400, η = .0001, ε = .01):
         """A gradient descent implementation to find p*
         """
         i = 1
         while(True):
 
             print(f"round: {i}")
+            print(f"p: {np.round(self.p,4)}")
 
             #step 1 is to integrate for (S,I,R) and update the SIR values
             V = self.forwardSolve()
@@ -148,17 +149,17 @@ class solveSIR:
             self.λ = self.backwardsSolve()
 
             #compute the gradient
-            dL_dp = np.clip(self.dF_dp(),-10, 10)
-            #dL_dp = self.dF_dp()
+            dL_dp = self.dF_dp()
             #perform the gradient update
             self.p = self.p - (η/i)*dL_dp
 
-            if self.p[0] < 0:
-                self.p[0] = .1
-            
-            if self.p[1] < 0:
-                self.p[1] = .1
+            for i, param in enumerate(self.p): 
+                if param < 0:
+                    self.p[i] = .0001
 
+            X_0 = self.p[2:]
+            X_0 = X_0/np.sum(X_0)
+            self.p[2],self.p[3],self.p[4]= X_0[0], X_0[1], X_0[2]
 
             #check for convergence: 
             if( (np.sqrt(np.dot(dL_dp,  dL_dp)) < ε)  or i > max_iter):

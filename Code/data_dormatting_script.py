@@ -14,9 +14,9 @@ R = 10*data["recovered"]
 S = N - data["positive"]*10
 I = N - R - S
 
-data["S"]=  S
-data["I"]=  I
-data["R"]=  R
+data["S"]=  S/N
+data["I"]=  I/N
+data["R"]=  R/N
 
 f_S = interpolate.interp1d(np.arange(len(data)), data['S'], kind='quadratic', axis=-1)
 f_I = interpolate.interp1d(np.arange(len(data)), data['I'], kind='quadratic', axis=-1)
@@ -34,4 +34,4 @@ output["R"] = R
 
 data =  output
 
-data.to_csv("/Users/omarafifi/MyFolders/Differential-Game-Theory-for-SIR-Models/Data/formatted_data.csv")
+data.to_csv("/Users/omarafifi/MyFolders/Differential-Game-Theory-for-SIR-Models/Data/_normalized.csv")
