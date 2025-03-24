@@ -12,6 +12,7 @@ def solveQuadratic(a,b,c):
 
     return 2*a*np.array(x1,x2)
 
+
 class control_model(torch.nn.Module):
     def __init__(self, θ):
         super(control_model, self).__init__()

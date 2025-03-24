@@ -1,4 +1,4 @@
-from SIR import SIR
+from Code.SIR_adjoint_model import SIR
 from torchdiffeq import odeint_adjoint as odeint
 import torch
 
