@@ -1,23 +1,11 @@
 import torch
-import numpy as np
 
  #ode_adjoint expects a forward function that inherits from nn.module
-
-def solveQuadratic(a,b,c):
-    """ Solves ax^2 + bx +c = 0
-        Note: this solver assumes the existence of two real roots
-    """
-    x1 = -b + np.sqrt(b*b - 4*a*c)
-    x2 = -b - np.sqrt(b*b - 4*a*c)
-
-    return 2*a*np.array(x1,x2)
-
-
-class control_model(torch.nn.Module):
+class SIR(torch.nn.Module):
     def __init__(self, θ):
-        super(control_model, self).__init__()
+        super(SIR, self).__init__()
 
-        """Constructor: θ = (Β_0, γ_0, m,  S_0, I_0, V_0)
+        """Constructor: θ = (Β_0, γ_0, S_0, I_0, R_0)
         """
         self.θ = torch.nn.Parameter(θ) 
 
