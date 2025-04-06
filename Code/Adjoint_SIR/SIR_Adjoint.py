@@ -1,4 +1,4 @@
-from Code.SIR_adjoint_model import SIR
+from SIR_Adjoint_model import SIR
 from torchdiffeq import odeint_adjoint as odeint
 import torch
 
@@ -50,4 +50,4 @@ def fit(p_0, I, epochs = 100, lr = .001):
 
 
     # make a forward pass and return those values
-    return odeint(model, model.θ[2:], t, method='dopri5')
+    return odeint(model, model.θ[2:], t, method='dopri5'), model

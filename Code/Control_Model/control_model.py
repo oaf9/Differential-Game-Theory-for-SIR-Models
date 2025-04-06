@@ -1,7 +1,6 @@
 import torch
 import numpy as np
 
- #ode_adjoint expects a forward function that inherits from nn.module
 
 def solveQuadratic(a,b,c):
     """ Solves ax^2 + bx +c = 0
@@ -15,6 +14,7 @@ def solveQuadratic(a,b,c):
 
     return torch.stack([x1,x2])/(2*a)
 
+ #ode_adjoint expects a forward function that inherits from nn.module
 class control_model(torch.nn.Module):
     def __init__(self, θ, m):
         super(control_model, self).__init__()

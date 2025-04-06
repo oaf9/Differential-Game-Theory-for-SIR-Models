@@ -6,7 +6,10 @@ import torch
 def lossF(pred, true): 
         return torch.mean((pred - torch.tensor(true, dtype=torch.float32))**2)
 
-def fit(p_0, m, I, epochs = 100, lr = .001):
+def fit(p_0, m, X, epochs = 100, lr = .001):
+    """
+    X is the data = [S,I,R]
+    """
 
     #first we ensure that the initial paramaters are compatible with torch
     # p_0 = (Β_0, γ_0, S_0, I_0, R_0, V_0 ) -- matches params for SIR()
@@ -16,13 +19,14 @@ def fit(p_0, m, I, epochs = 100, lr = .001):
     N = p_0[2:].sum()
 
     #setting the timesteps to fit at ... this will depend on your data
-    t = torch.linspace(0, len(I), 152)
+    t = torch.linspace(0, len(X), 152)
 
     #initilize the model
     model = control_model(p_0, m)
 
     #using stochastic gradient descent 
-    optimizer = torch.optim.SGD(model.parameters(), lr = .001)
+    optimizer = torch.optim.Adam(model.parameters(), lr = lr)
+
 
     for i in range(epochs): 
 
@@ -32,12 +36,15 @@ def fit(p_0, m, I, epochs = 100, lr = .001):
 
         # retrieve the initil conditions from the model
         X_0 = model.get_initial_conditions()
-        I_hat = odeint(model, X_0, t, method = 'dopri5')[:,1]
+
+        #we are optimizing to minimize error in I and S 
+        X_hat = odeint(model, X_0, t, method = 'dopri5')[:,0:2]
+        X_true = X[:,0:2]
         
         #calculate loss
-        loss = lossF(I_hat, I)
+        loss = .2*lossF(X_hat[:, 0], X_true[:, 0]) + .8*lossF(X_hat[:, 1], X_true[:, 1])
 
-        if(loss < .001): 
+        if(loss < .0109): #if we get RSE low enough, we break the loop
              break
 
         #compute and update the gradients
@@ -57,9 +64,5 @@ def fit(p_0, m, I, epochs = 100, lr = .001):
         print(f"Loss {i} = {loss}")
 
 
-
-
-
-
     # make a forward pass and return those values
-    return odeint(model, model.θ[2:], t, method='dopri5')
+    return odeint(model, model.θ[2:], t, method='dopri5'), model
