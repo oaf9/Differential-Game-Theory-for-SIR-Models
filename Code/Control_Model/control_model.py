@@ -11,8 +11,8 @@ def solveQuadratic(a,b,c):
     x2 = -b - torch.sqrt(b*b - 4*a*c)
 
     #print(torch.sqrt(b*b - 4*a*c))
-
     return torch.stack([x1,x2])/(2*a)
+
 
  #ode_adjoint expects a forward function that inherits from nn.module
 class control_model(torch.nn.Module):
