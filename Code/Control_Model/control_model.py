@@ -14,38 +14,70 @@ def solveQuadratic(a,b,c):
     return torch.stack([x1,x2])/(2*a)
 
 
- #ode_adjoint expects a forward function that inherits from nn.module
+def Linear_interpolation(t, x_prev, x_next, y_prev, y_next):
+    """Simple Linear Interpolater
+    """
+    a = y_prev
+    b = (y_next - y_prev)/(x_next - x_prev)
+
+    return a + b*(t - x_prev)
+
+
+#ode_adjoint expects a forward function that inherits from nn.module
 class control_model(torch.nn.Module):
-    def __init__(self, θ, m):
+    def __init__(self, θ, m, time_steps):
         super(control_model, self).__init__()
 
-        """Constructor: θ = (Β_0, γ_0,  m,  S_0, I_0, V_0)
-        """
+        """ Constructor: θ = (Β_0, γ_0, m, S_0, I_0, V_0) """
+
         self.θ = torch.nn.Parameter(θ)
         self.m = torch.nn.Parameter(m)
 
-        self.cost = []
+        #these are the control paramaters
+        self.c = torch.nn.Parameter(torch.zeros(time_steps))
 
     def σ(self, c):
         """ models the returns the risk of infection in terms of control"""
         return 1/(self.m*c + 1)
+    
+
+    def interpolate(self, t):
+
+        t_max = self.c.shape[0] - 1
+        if t <= 0:
+            return self.c[0]
+        elif t >= t_max:
+            return self.c[-1]
+        else: 
+            t_prev = torch.floor(t).long()
+            t_next = torch.ceil(t).long()
+            y_prev = self.c[t_prev]
+            y_next = self.c[t_next]
+
+            return Linear_interpolation(t = t, 
+                                        x_prev = t_prev,
+                                        y_prev = y_prev,
+                                        x_next = t_next, 
+                                        y_next = y_next)
+
+
 
     def forward(self, t, X):
+        """defines the SIR equations"""
 
-        # defines the SIR equations
+        #unpack model params
         Β, γ  = self.θ[0:2]
 
+        #unpack the system state
         S, I, R, Vs = X
         N = S + I + R
 
         #update the control values
-        a,b,c = (self.m*self.m), 2*self.m, (1-self.m*I*(1+Vs))
+        c_optimal = torch.clamp(self.interpolate(t), min=0.0)
+        if c_optimal < 0: 
+            c_optimal = 0 
 
-        c_optimal = 0
-
-        if c >= 0: 
-            c_optimal = solveQuadratic(a,b,c)[0]
-
+        #pass c(t) through σ()
         σ_c = self.σ(c_optimal)
 
         
@@ -55,8 +87,6 @@ class control_model(torch.nn.Module):
         dVs = (1+Vs)* σ_c * I + c_optimal
 
         return torch.stack([dS, dI, dR, -dVs])
-    
-
     
     def get_initial_conditions(self):
 

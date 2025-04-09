@@ -34,6 +34,7 @@ def fit(p_0, I, epochs = 100, lr = .001):
         loss = lossF(I_hat, I)
 
         #compute and update the gradients
+        optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 

@@ -6,7 +6,7 @@ import torch
 def lossF(pred, true): 
         return torch.mean((pred - torch.tensor(true, dtype=torch.float32))**2)
 
-def fit(p_0, m, X, epochs = 100, lr = .001):
+def fit(p_0, m, X, epochs = 100, lr = .0001):
     """
     X is the data = [S,I,R]
     """
@@ -22,7 +22,7 @@ def fit(p_0, m, X, epochs = 100, lr = .001):
     t = torch.linspace(0, len(X), 152)
 
     #initilize the model
-    model = control_model(p_0, m)
+    model = control_model(p_0, m, len(X))
 
     #using stochastic gradient descent 
     optimizer = torch.optim.Adam(model.parameters(), lr = lr)
@@ -38,16 +38,17 @@ def fit(p_0, m, X, epochs = 100, lr = .001):
         X_0 = model.get_initial_conditions()
 
         #we are optimizing to minimize error in I and S 
-        X_hat = odeint(model, X_0, t, method = 'dopri5')[:,0:2]
+        X_hat = odeint(model, X_0, t, method = 'dopri5', 
+                       options={'step_size': 1e-3, 'min_step': 1e-6})[:,0:2]
         X_true = X[:,0:2]
         
         #calculate loss
-        loss = .2*lossF(X_hat[:, 0], X_true[:, 0]) + .8*lossF(X_hat[:, 1], X_true[:, 1])
-
-        if(loss < .0109): #if we get RSE low enough, we break the loop
+        loss = lossF(X_hat[:, 0:2], X_true[:, 0:2])
+        if(loss < .001): #if we get RSE low enough, we break the loop
              break
 
         #compute and update the gradients
+        optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
