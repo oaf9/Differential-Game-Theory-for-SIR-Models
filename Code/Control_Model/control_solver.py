@@ -39,11 +39,12 @@ def fit(p_0, m, X, epochs = 100, lr = .0001):
 
         #we are optimizing to minimize error in I and S 
         X_hat = odeint(model, X_0, t, method = 'dopri5', 
-                       options={'step_size': 1e-3, 'min_step': 1e-6})[:,0:2]
+                       options={'min_step': 1e-6})[:,0:2]
         X_true = X[:,0:2]
         
         #calculate loss
-        loss = lossF(X_hat[:, 0:2], X_true[:, 0:2])
+        loss = 0.1 * lossF(X_hat[:, 0], X_true[:, 0]) + 0.9 * lossF(X_hat[:, 1], X_true[:, 1])
+
         if(loss < .001): #if we get RSE low enough, we break the loop
              break
 

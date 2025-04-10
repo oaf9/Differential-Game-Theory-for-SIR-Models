@@ -25,8 +25,8 @@ def fit(p_0, I, epochs = 100, lr = .001):
     for i in range(epochs): 
 
         #make the forward pass: 
-
         # retrieve the initil conditions from the model
+        
         X_0 = model.get_initial_conditions()
         I_hat = odeint(model, X_0, t, method = 'dopri5')[:,1]
         
