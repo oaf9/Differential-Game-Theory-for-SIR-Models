@@ -14,7 +14,7 @@ def fit(p_0, m, X, epochs = 100, lr = .0001):
     #first we ensure that the initial paramaters are compatible with torch
     # p_0 = (Β_0, γ_0, S_0, I_0, R_0, V_0 ) -- matches params for SIR()
     p_0 = torch.tensor(p_0, dtype = torch.float32)
-    m = torch.tensor(m, dtype = torch.float32)
+    m = torch.tensor(m, dtype = torch.float32, requires_grad = True)
     
     N = p_0[2:].sum()
 
@@ -30,7 +30,7 @@ def fit(p_0, m, X, epochs = 100, lr = .0001):
 
     for i in range(epochs): 
 
-        print(model.m)
+        #print(model.c[10:20])
 
         #make the forward pass: 
 
@@ -43,15 +43,21 @@ def fit(p_0, m, X, epochs = 100, lr = .0001):
         X_true = X[:,0:2]
         
         #calculate loss
-        loss = 0.1 * lossF(X_hat[:, 0], X_true[:, 0]) + 0.9 * lossF(X_hat[:, 1], X_true[:, 1])
+        loss = 0.05 * lossF(X_hat[:, 0], X_true[:, 0]) +.95*lossF(X_hat[:, 1], X_true[:, 1])
 
-        if(loss < .001): #if we get RSE low enough, we break the loop
+        if(loss < .0001): #if we get RSE low enough, we break the loop
              break
 
         #compute and update the gradients
+
+
+
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+
+        print("grad for c:", model.c.grad.norm().item())
+        print("grad for m:", model.m.grad.item())
 
         #project the values back into valid numerical ranges
         with torch.no_grad():
@@ -62,9 +68,11 @@ def fit(p_0, m, X, epochs = 100, lr = .0001):
             model.θ.data[2:] = model.θ.data[2:] / model.θ.data[2:].sum() * N
 
         #print values
-        print(f"p = {model.θ}, {model.m}")
+        print(f"c = {model.c[10:15].detach()}")
+        print(f"m = {model.m.detach()}")
         print(f"Loss {i} = {loss}")
 
 
     # make a forward pass and return those values
-    return odeint(model, model.θ[2:], t, method='dopri5'), model
+    return odeint(model, model.get_initial_conditions(), t, method = 'dopri5', 
+                       options={'min_step': 1e-6}), model

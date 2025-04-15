@@ -20,7 +20,7 @@ V_0 <- c(S = S_0, I = I_0, R = R_0)
 # predicting in terms of weeks
 
 #params_0 <- c(b = as.numeric(beta), g = as.numeric(gamma))
-params_0 <- c(b =.588, g = .222)
+params_0 <- c(b =.486, g = .207)
 
 
 
@@ -63,20 +63,20 @@ require(ggplot2)
 
 #
 SIR_pred <- ggplot(data = predictions, aes(x = date_times))+
-  geom_line(aes(y = R, color = "Recovered"), 
+  geom_line(aes(y = predictions[,"S"], color = "S_pred", linetype = "--"), 
             size = 2)+
-  geom_line(aes(y = S, color = "Susceptible"), 
+  geom_line(aes(y = S, color = "S_true"), 
             size = 2)+ 
-  geom_line(aes(y = I, color = "Infected"), 
+  geom_line(aes(y = I, color = "I_true"), 
             size = 2)+
   labs(title = 'SIR Predictions', 
        subtitle = 'Population = 10.2M',
        x = "Date",
        y = "Number of People", 
        color = "Category")+ 
-   scale_color_manual(values = c("Recovered" = "#D5C36C", 
-                                 "Susceptible" = "#C0E4ED", 
-                                 "Infected" = "#397689"))
+   scale_color_manual(values = c("S_pred" = "#D5C36C", 
+                                 "S_true" = "#C0E4ED", 
+                                 "I_true" = "#397689"))
 
 #display results
 SIR_pred
@@ -112,16 +112,17 @@ RSS <- function(y_pred, y){
   
 }
 
-SIR_loss <- function(paramaters, state, times, I_true){
+SIR_loss <- function(paramaters, state, times, I_true, S_true){
 
   model_out <- ode(y = state, 
                    times = times, 
                    func = SIR, 
                    parms = paramaters)
  
-  I_pred <- model_out[,3]
+  I_pred <- model_out[,"I"]
+  S_pred <- model_out[,"S"]
   
-  return (RSS(I_pred, I_true))
+  return (.9*RSS(I_pred, I_true)+ .1*RSS(S_pred, S_true))
 }
 
 loss_wrt_params <- function(paramaters){
@@ -132,11 +133,13 @@ loss_wrt_params <- function(paramaters){
   times <- seq(1, t, by = 1)
   
   I_true <- I[,1]
+  S_true = S[,1]
   
   SIR_loss(paramaters = paramaters, 
            state = state, 
            times = times, 
-           I_true = I_true)
+           I_true = I_true,
+           S_true = S_true)
 }
 
 

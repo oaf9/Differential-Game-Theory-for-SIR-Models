@@ -34,7 +34,7 @@ class control_model(torch.nn.Module):
         self.m = torch.nn.Parameter(m)
 
         #these are the control paramaters
-        self.c = torch.nn.Parameter(torch.zeros(time_steps))
+        self.c = torch.nn.Parameter(torch.zeros(time_steps)+.1)
 
     def σ(self, c):
         """ models the returns the risk of infection in terms of control"""
@@ -73,9 +73,7 @@ class control_model(torch.nn.Module):
         N = S + I + R
 
         #update the control values
-        c_optimal = torch.clamp(self.interpolate(t), min=0.0)
-        if c_optimal < 0: 
-            c_optimal = 0 
+        c_optimal = torch.relu(self.interpolate(t))
 
         #pass c(t) through σ()
         σ_c = self.σ(c_optimal)
