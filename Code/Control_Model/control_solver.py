@@ -43,7 +43,7 @@ def fit(p_0, m, X, epochs = 100, lr = .0001):
         X_true = X[:,0:2]
         
         #calculate loss
-        loss = 0.05 * lossF(X_hat[:, 0], X_true[:, 0]) +.95*lossF(X_hat[:, 1], X_true[:, 1])
+        loss = 0.1 * lossF(X_hat[:, 0], X_true[:, 0]) +.9*lossF(X_hat[:, 1], X_true[:, 1])
 
         if(loss < .0001): #if we get RSE low enough, we break the loop
              break
