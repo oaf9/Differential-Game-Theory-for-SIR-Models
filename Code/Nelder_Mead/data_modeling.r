@@ -32,6 +32,7 @@ sir_data_plot <- ggplot(data = michigan_data, aes(x = date))+
   geom_line(aes(y = Susceptible), 
             size = 1,
             color = "#C0E4ED")+ 
+  
   geom_line(aes(y = Infected), 
             size = 1,
             color = "#397689")+
