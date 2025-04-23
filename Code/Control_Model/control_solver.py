@@ -25,7 +25,7 @@ def fit(p_0, m, X, epochs = 100, lr = .0001):
     model = control_model(p_0, m, len(X))
 
     #using stochastic gradient descent 
-    optimizer = torch.optim.Adam(model.parameters(), lr = lr)
+    optimizer = torch.optim.SGD(model.parameters(), lr = lr)
 
 
     for i in range(epochs): 
