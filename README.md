@@ -1,1 +1,2 @@
-We apply Differential Game Theory to Model Epidemics.
+This Repository Contains Code to optimize Dynamical Systems with functional and nonfunctional controls to data. control_model shows how to fit an SIR model to data using TorchDiffQ to solve the backwards adjoint equations. It uses a Linear Interpolation to track gradients for the control functional. Adjoint_SIR shows how to use the adjoint method to fit a simple SIR model (equivalent to the one proposed by Kermack and McKendrick. However, you can use this ocde more generally to fit controls on dynamical systems to data. 
+
